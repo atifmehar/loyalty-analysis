@@ -221,7 +221,25 @@ public class LoyaltyService {
         return transactionRepository.findAll();
     }
 
+    public Flux<Transaction> searchTransactions(
+            String transactionId,
+            String customerId,
+            Double minAmount,
+            Double maxAmount,
+            String timestamp,
+            String items,
+            Boolean couponUsed) {
+        // Build query based on provided parameters
+        //return transactionRepository.findByCriteria(transactionId, customerId, minAmount, maxAmount, timestamp, items, couponUsed);
+        return null;
+    }
+
     public Flux<Customer> getInactiveMembers() {
         return customerRepository.findByStatusInactive(); // Assuming a method to find inactive customers
+    }
+
+    public Flux<Reward> searchRewards(String rewardId, String customerId) {
+        return null;
+        //return rewardRepository.findByCriteria(rewardId, customerId); // Assume RewardRepository exists
     }
 }

@@ -191,8 +191,10 @@
     <h2>Transactions</h2>
     <div class="form-row">
         <input id="transaction-id" type="text" placeholder="Transaction ID">
-        <input id="transaction-amount" type="number" placeholder="Amount">
-        <button onclick="addTransaction()">Add Transaction</button>
+        <input id="customer-id" type="text" placeholder="Customer ID">
+        <input id="min-amount" type="number" placeholder="Min Amount">
+        <input id="max-amount" type="number" placeholder="Max Amount">
+        <button onclick="searchTransactions()">Find Transaction</button>
     </div>
     <table id="transactions-table">
         <thead>
@@ -210,6 +212,34 @@
     <p id="transaction-status" class="status-message"></p>
 </div>
 
+<!-- Rewards -->
+<div class="dashboard-section">
+    <h2>Rewards</h2>
+    <div class="form-row">
+        <input id="search-reward-id" type="text" placeholder="Reward ID">
+        <input id="search-reward-description" type="text" placeholder="Description">
+        <button onclick="searchRewards()">Search Reward</button>
+    </div>
+    <div class="form-row" style="margin-top: 10px;">
+        <input id="reward-id" type="text" placeholder="Reward ID">
+        <textarea id="reward-description" placeholder="Reward Description"></textarea>
+        <button onclick="addReward()">Add Reward</button>
+    </div>
+    <table id="rewards-table">
+        <thead>
+        <tr>
+            <th>Reward ID</th>
+            <th>Customer ID</th>
+            <th>Points Earned</th>
+            <th>Points Redeemed</th>
+            <th>Date</th>
+        </tr>
+        </thead>
+        <tbody id="rewards-body"></tbody>
+    </table>
+    <p id="reward-status" class="status-message"></p>
+</div>
+
 <!-- Reduce Churn -->
 <div class="dashboard-section">
     <h2>Reduce Churn</h2>
@@ -217,23 +247,12 @@
     <p id="reduce-churn-status" class="status-message"></p>
 </div>
 
-<!-- Add Reward -->
-<div class="dashboard-section">
-    <h2>Add Reward</h2>
-    <div class="form-row">
-        <input id="reward-id" type="text" placeholder="Reward ID">
-        <textarea id="reward-description" placeholder="Reward Description"></textarea>
-        <button onclick="addReward()">Add Reward</button>
-    </div>
-    <p id="reward-status" class="status-message"></p>
-</div>
-
 <!-- Sync Customer -->
 <div class="dashboard-section">
     <h2>Sync Customer</h2>
     <div class="form-row">
-        <input id="customer-id" type="text" placeholder="Customer ID">
-        <input id="customer-name" type="text" placeholder="Customer Name">
+        <input id="sync-customer-id" type="text" placeholder="Customer ID">
+        <input id="sync-customer-name" type="text" placeholder="Customer Name">
         <button onclick="syncCustomer()">Sync Customer</button>
     </div>
     <p id="customer-sync-status" class="status-message"></p>
@@ -326,7 +345,7 @@
             const memberList = document.getElementById('active-members');
             activeMembers.forEach(member => {
                 const li = document.createElement('li');
-                li.innerText = `ID: ${member.customerId || 'undefined'}, Name: ${member.name || 'Unknown'}`;
+                li.innerText = `ID: ${member.id || 'undefined'}, Name: ${member.name || 'Unknown'}`;
                 memberList.appendChild(li);
             });
 
@@ -381,11 +400,11 @@
         try {
             const eventName = 'purchase';
             const response = await fetch(`/api/loyalty/woopra-events/${eventName}`);
-            if (!response.ok) throw new Error(`Failed to fetch Woopra events: ${response.status}`);
+            if (!response.ok) throw new Error(`Failed to fetch Woopra events: ${response.statusText} (${response.status})`);
             const events = await response.json();
             const eventList = document.getElementById('woopra-events');
-            if (events.length === 0) {
-                eventList.innerHTML = '<li>No events found</li>';
+            if (!events || events.length === 0) {
+                eventList.innerHTML = '<li>No events found for "purchase". Try a different event name or ensure data exists.</li>';
                 return;
             }
             events.forEach(event => {
@@ -394,73 +413,87 @@
                 eventList.appendChild(li);
             });
         } catch (error) {
+            console.error('Woopra Events Error:', error);
             document.getElementById('woopra-events').innerHTML = `<li>Error fetching data: ${error.message}</li>`;
         }
     }
 
-    // Function to fetch and display Transactions
-    async function fetchTransactions() {
+    // Function to search Transactions
+    async function searchTransactions() {
         try {
-            const response = await fetch('/api/loyalty/transactions');
+            const transactionId = document.getElementById('transaction-id').value;
+            const customerId = document.getElementById('customer-id').value;
+            const minAmount = document.getElementById('min-amount').value;
+            const maxAmount = document.getElementById('max-amount').value;
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (transactionId) params.append('transactionId', transactionId);
+            if (customerId) params.append('customerId', customerId);
+            if (minAmount) params.append('minAmount', minAmount);
+            if (maxAmount) params.append('maxAmount', maxAmount);
+
+            const response = await fetch(`/api/loyalty/transactions?${params.toString()}`);
             if (!response.ok) throw new Error('Failed to fetch transactions');
             const transactions = await response.json();
             const tbody = document.getElementById('transactions-body');
             tbody.innerHTML = ''; // Clear existing rows
+            if (transactions.length === 0) {
+                document.getElementById('transaction-status').innerText = 'No transactions found.';
+                return;
+            }
             transactions.forEach(transaction => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${transaction.transactionId || 'N/A'}</td>
                     <td>${transaction.customerId || 'N/A'}</td>
                     <td>${transaction.amount ? transaction.amount.toFixed(2) : 'N/A'}</td>
-                    <td>${transaction.date || 'N/A'}</td>
+                    <td>${transaction.timestamp || 'N/A'}</td>
                     <td>${transaction.items || 'N/A'}</td>
-                    <td>${transaction.couponUsed || 'N/A'}</td>
+                    <td>${transaction.couponUsed !== undefined ? transaction.couponUsed : 'N/A'}</td>
                 `;
                 tbody.appendChild(tr);
             });
+            document.getElementById('transaction-status').innerText = '';
         } catch (error) {
             document.getElementById('transaction-status').innerText = 'Error fetching transactions: ' + error.message;
         }
     }
 
-    // Function to add a Transaction
-    async function addTransaction() {
+    // Function to search Rewards
+    async function searchRewards() {
         try {
-            const transactionId = document.getElementById('transaction-id').value;
-            const transactionAmount = document.getElementById('transaction-amount').value;
-            if (!transactionId || !transactionAmount) throw new Error('Please fill in all fields');
-            const transaction = { id: transactionId, amount: parseFloat(transactionAmount) };
+            const rewardId = document.getElementById('search-reward-id').value;
+            const description = document.getElementById('search-reward-description').value;
 
-            const response = await fetch('/api/loyalty/transactions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(transaction)
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (rewardId) params.append('rewardId', rewardId);
+            if (description) params.append('description', description);
+
+            const response = await fetch(`/api/loyalty/rewards?${params.toString()}`);
+            if (!response.ok) throw new Error('Failed to fetch rewards');
+            const rewards = await response.json();
+            const tbody = document.getElementById('rewards-body');
+            tbody.innerHTML = ''; // Clear existing rows
+            if (rewards.length === 0) {
+                document.getElementById('reward-status').innerText = 'No rewards found.';
+                return;
+            }
+            rewards.forEach(reward => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${reward.rewardId || 'N/A'}</td>
+                    <td>${reward.customerId || 'N/A'}</td>
+                    <td>${reward.pointsEarned || 'N/A'}</td>
+                    <td>${reward.pointsRedeemed || 'N/A'}</td>
+                    <td>${reward.date || 'N/A'}</td>
+                `;
+                tbody.appendChild(tr);
             });
-
-            if (response.ok) {
-                document.getElementById('transaction-status').innerText = 'Transaction added successfully!';
-                document.getElementById('transaction-id').value = '';
-                document.getElementById('transaction-amount').value = '';
-                fetchTransactions(); // Refresh the table
-            } else {
-                document.getElementById('transaction-status').innerText = 'Failed to add transaction.';
-            }
+            document.getElementById('reward-status').innerText = '';
         } catch (error) {
-            document.getElementById('transaction-status').innerText = 'Error: ' + error.message;
-        }
-    }
-
-    // Function to trigger Reduce Churn
-    async function reduceChurn() {
-        try {
-            const response = await fetch('/api/loyalty/reduce-churn', { method: 'POST' });
-            if (response.ok) {
-                document.getElementById('reduce-churn-status').innerText = 'Churn reduction triggered successfully!';
-            } else {
-                document.getElementById('reduce-churn-status').innerText = 'Failed to trigger churn reduction.';
-            }
-        } catch (error) {
-            document.getElementById('reduce-churn-status').innerText = 'Error: ' + error.message;
+            document.getElementById('reward-status').innerText = 'Error fetching rewards: ' + error.message;
         }
     }
 
@@ -482,6 +515,7 @@
                 document.getElementById('reward-status').innerText = 'Reward added successfully!';
                 document.getElementById('reward-id').value = '';
                 document.getElementById('reward-description').value = '';
+                searchRewards(); // Refresh the table
             } else {
                 document.getElementById('reward-status').innerText = 'Failed to add reward.';
             }
@@ -490,11 +524,25 @@
         }
     }
 
+    // Function to trigger Reduce Churn
+    async function reduceChurn() {
+        try {
+            const response = await fetch('/api/loyalty/reduce-churn', { method: 'POST' });
+            if (response.ok) {
+                document.getElementById('reduce-churn-status').innerText = 'Churn reduction triggered successfully!';
+            } else {
+                document.getElementById('reduce-churn-status').innerText = 'Failed to trigger churn reduction.';
+            }
+        } catch (error) {
+            document.getElementById('reduce-churn-status').innerText = 'Error: ' + error.message;
+        }
+    }
+
     // Function to sync a Customer
     async function syncCustomer() {
         try {
-            const customerId = document.getElementById('customer-id').value;
-            const customerName = document.getElementById('customer-name').value;
+            const customerId = document.getElementById('sync-customer-id').value;
+            const customerName = document.getElementById('sync-customer-name').value;
             if (!customerId || !customerName) throw new Error('Please fill in all fields');
             const customer = { id: customerId, name: customerName };
 
@@ -506,8 +554,8 @@
 
             if (response.ok) {
                 document.getElementById('customer-sync-status').innerText = 'Customer synced successfully!';
-                document.getElementById('customer-id').value = '';
-                document.getElementById('customer-name').value = '';
+                document.getElementById('sync-customer-id').value = '';
+                document.getElementById('sync-customer-name').value = '';
             } else {
                 document.getElementById('customer-sync-status').innerText = 'Failed to sync customer.';
             }
@@ -522,7 +570,8 @@
         fetchRepeatPurchaseRate();
         fetchMembers();
         fetchWoopraEvents();
-        fetchTransactions();
+        searchTransactions(); // Initial load of transactions
+        searchRewards(); // Initial load of rewards
     };
 </script>
 </body>

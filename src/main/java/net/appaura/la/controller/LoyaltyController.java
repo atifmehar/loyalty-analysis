@@ -73,8 +73,27 @@ public class LoyaltyController {
         return loyaltyService.getAllTransactions();
     }
 
+    @GetMapping("/transactions-search")
+    public Flux<Transaction> searchTransactions(
+            @RequestParam(required = false) String transactionId,
+            @RequestParam(required = false) String customerId,
+            @RequestParam(required = false) Double minAmount,
+            @RequestParam(required = false) Double maxAmount,
+            @RequestParam(required = false) String timestamp,
+            @RequestParam(required = false) String items,
+            @RequestParam(required = false) Boolean couponUsed) {
+        return loyaltyService.searchTransactions(transactionId, customerId, minAmount, maxAmount, timestamp, items, couponUsed);
+    }
+
     @GetMapping("/inactive-members")
     public Flux<Customer> getInactiveMembers() {
         return loyaltyService.getInactiveMembers();
+    }
+
+    @GetMapping("/rewards")
+    public Flux<Reward> searchRewards(
+            @RequestParam(required = false) String rewardId,
+            @RequestParam(required = false) String description) {
+        return loyaltyService.searchRewards(rewardId, description);
     }
 }
