@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: loyalty analysis
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/loyaltyDB
+  thymeleaf:
+    check-template-location: true
+    prefix: classpath:/templates/
+    suffix: .html
+
+woopra:
+  app-id: appaura
+  app-secret: d88f2236dfa15dfd819c7cf4a81f0c34cef77a9288cd8ddd13255378ad48e841
+  base-url: https://www.woopra.com
+server:
+  port: 8080
