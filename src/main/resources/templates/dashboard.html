@@ -197,9 +197,12 @@
     <table id="transactions-table">
         <thead>
         <tr>
-            <th>ID</th>
+            <th>Transaction ID</th>
+            <th>Customer ID</th>
             <th>Amount</th>
             <th>Timestamp</th>
+            <th>Items</th>
+            <th>Coupon Used</th>
         </tr>
         </thead>
         <tbody id="transactions-body"></tbody>
@@ -407,8 +410,11 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${transaction.transactionId || 'N/A'}</td>
+                    <td>${transaction.customerId || 'N/A'}</td>
                     <td>${transaction.amount ? transaction.amount.toFixed(2) : 'N/A'}</td>
                     <td>${transaction.date || 'N/A'}</td>
+                    <td>${transaction.items || 'N/A'}</td>
+                    <td>${transaction.couponUsed || 'N/A'}</td>
                 `;
                 tbody.appendChild(tr);
             });
