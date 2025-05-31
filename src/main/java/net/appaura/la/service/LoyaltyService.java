@@ -216,4 +216,12 @@ public class LoyaltyService {
                 .doOnError(e -> logger.error("Error in reduce-churn operation: {}", e.getMessage()))
                 .then();
     }
+
+    public Flux<Transaction> getAllTransactions() {
+        return transactionRepository.findAll();
+    }
+
+    public Flux<Customer> getInactiveMembers() {
+        return customerRepository.findByStatusFalse(); // Assuming a method to find inactive customers
+    }
 }

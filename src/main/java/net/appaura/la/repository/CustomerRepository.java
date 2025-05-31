@@ -6,4 +6,5 @@ import reactor.core.publisher.Flux;
 
 public interface CustomerRepository extends ReactiveMongoRepository<Customer, String> {
     Flux<Customer> findByStatus(String status);
+    Flux<Customer> findByStatusFalse();
 }

@@ -7,6 +7,8 @@ import net.appaura.la.model.WoopraEventLog;
 import net.appaura.la.service.LoyaltyService;
 import net.appaura.la.repository.WoopraEventLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -40,8 +42,10 @@ public class LoyaltyController {
     }
 
     @GetMapping("/churn-rate")
-    public Mono<Double> getChurnRate() {
-        return loyaltyService.calculateChurnRate();
+    public Mono<ResponseEntity<Double>> getChurnRate() {
+        return loyaltyService.calculateChurnRate()
+                .map(rate -> ResponseEntity.ok(rate))
+                .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(0.0)));
     }
 
     @GetMapping("/repeat-purchase-rate")
@@ -62,5 +66,15 @@ public class LoyaltyController {
     @PostMapping("/customers")
     public Mono<Customer> syncCustomer(@RequestBody Customer customer) {
         return loyaltyService.syncCustomerToPlatform(customer);
+    }
+
+    @GetMapping("/transactions")
+    public Flux<Transaction> getAllTransactions() {
+        return loyaltyService.getAllTransactions();
+    }
+
+    @GetMapping("/inactive-members")
+    public Flux<Customer> getInactiveMembers() {
+        return loyaltyService.getInactiveMembers();
     }
 }
