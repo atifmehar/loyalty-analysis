@@ -323,7 +323,7 @@
             const memberList = document.getElementById('active-members');
             activeMembers.forEach(member => {
                 const li = document.createElement('li');
-                li.innerText = `ID: ${member.id || 'undefined'}, Name: ${member.name || 'Unknown'}`;
+                li.innerText = `ID: ${member.customerId || 'undefined'}, Name: ${member.name || 'Unknown'}`;
                 memberList.appendChild(li);
             });
 
@@ -406,9 +406,9 @@
             transactions.forEach(transaction => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${transaction.id || 'N/A'}</td>
+                    <td>${transaction.transactionId || 'N/A'}</td>
                     <td>${transaction.amount ? transaction.amount.toFixed(2) : 'N/A'}</td>
-                    <td>${transaction.timestamp || 'N/A'}</td>
+                    <td>${transaction.date || 'N/A'}</td>
                 `;
                 tbody.appendChild(tr);
             });

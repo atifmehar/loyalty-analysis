@@ -222,6 +222,6 @@ public class LoyaltyService {
     }
 
     public Flux<Customer> getInactiveMembers() {
-        return customerRepository.findByStatusFalse(); // Assuming a method to find inactive customers
+        return customerRepository.findByStatusInactive(); // Assuming a method to find inactive customers
     }
 }
