@@ -37,7 +37,8 @@
     }
     return gk_fileData[filename] || "";
     }
-</script><!DOCTYPE html>
+</script>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -189,11 +190,14 @@
 <!-- Transactions -->
 <div class="dashboard-section">
     <h2>Transactions</h2>
-    <div class="form-row">
-        <input id="transaction-id" type="text" placeholder="Transaction ID">
-        <input id="customer-id" type="text" placeholder="Customer ID">
-        <input id="min-amount" type="number" placeholder="Min Amount">
-        <input id="max-amount" type="number" placeholder="Max Amount">
+    <div>
+        <input type="text" id="transactionId" placeholder="Transaction ID">
+        <input type="text" id="customerId" placeholder="Customer ID">
+        <input type="number" id="minAmount" placeholder="Min Amount">
+        <input type="number" id="maxAmount" placeholder="Max Amount">
+        <input type="text" id="timestamp" placeholder="Timestamp (yyyy-MM-dd'T'HH:mm:ss)">
+        <input type="text" id="items" placeholder="Items (comma-separated)">
+        <input type="checkbox" id="couponUsed"> Coupon Used
         <button onclick="searchTransactions()">Find Transaction</button>
     </div>
     <table id="transactions-table">
@@ -209,9 +213,8 @@
         </thead>
         <tbody id="transactions-body"></tbody>
     </table>
-    <p id="transaction-status" class="status-message"></p>
+    <p id="transactions-error" class="error"></p>
 </div>
-
 <!-- Rewards -->
 <div class="dashboard-section">
     <h2>Rewards</h2>
@@ -345,7 +348,7 @@
             const memberList = document.getElementById('active-members');
             activeMembers.forEach(member => {
                 const li = document.createElement('li');
-                li.innerText = `ID: ${member.id || 'undefined'}, Name: ${member.name || 'Unknown'}`;
+                li.innerText = `ID: ${member.customerId || 'undefined'}, Name: ${member.name || 'Unknown'}`;
                 memberList.appendChild(li);
             });
 
@@ -418,47 +421,70 @@
         }
     }
 
-    // Function to search Transactions
-    async function searchTransactions() {
-        try {
-            const transactionId = document.getElementById('transaction-id').value;
-            const customerId = document.getElementById('customer-id').value;
-            const minAmount = document.getElementById('min-amount').value;
-            const maxAmount = document.getElementById('max-amount').value;
+    function fetchAllTransactions() {
+            fetch('/api/loyalty/transactions/all')
+                .then(response => response.json())
+                .then(data => {
+                    displayTransactions(data);
+                })
+                .catch(error => {
+                    document.getElementById('transactions-error').textContent =
+                        'Error fetching transactions: ' + error.message;
+                });
+        }
 
-            // Build query parameters
+        function searchTransactions() {
             const params = new URLSearchParams();
+            const transactionId = document.getElementById('transactionId').value;
+            const customerId = document.getElementById('customerId').value;
+            const minAmount = document.getElementById('minAmount').value;
+            const maxAmount = document.getElementById('maxAmount').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const items = document.getElementById('items').value;
+            const couponUsed = document.getElementById('couponUsed').checked;
+
             if (transactionId) params.append('transactionId', transactionId);
             if (customerId) params.append('customerId', customerId);
             if (minAmount) params.append('minAmount', minAmount);
             if (maxAmount) params.append('maxAmount', maxAmount);
+            if (timestamp) params.append('timestamp', timestamp);
+            if (items) params.append('items', items);
+            if (couponUsed) params.append('couponUsed', couponUsed);
 
-            const response = await fetch(`/api/loyalty/transactions?${params.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch transactions');
-            const transactions = await response.json();
+            fetch(`/api/loyalty/transactions/search?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayTransactions(data);
+                })
+                .catch(error => {
+                    document.getElementById('transactions-error').textContent =
+                        'Error fetching transactions: ' + error.message;
+                });
+        }
+
+        function displayTransactions(transactions) {
             const tbody = document.getElementById('transactions-body');
-            tbody.innerHTML = ''; // Clear existing rows
+            tbody.innerHTML = '';
+            document.getElementById('transactions-error').textContent = '';
+
             if (transactions.length === 0) {
-                document.getElementById('transaction-status').innerText = 'No transactions found.';
+                document.getElementById('transactions-error').textContent = 'No transactions found.';
                 return;
             }
+
             transactions.forEach(transaction => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${transaction.transactionId || 'N/A'}</td>
-                    <td>${transaction.customerId || 'N/A'}</td>
-                    <td>${transaction.amount ? transaction.amount.toFixed(2) : 'N/A'}</td>
-                    <td>${transaction.timestamp || 'N/A'}</td>
-                    <td>${transaction.items || 'N/A'}</td>
-                    <td>${transaction.couponUsed !== undefined ? transaction.couponUsed : 'N/A'}</td>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.id || ''}</td>
+                    <td>${transaction.customerId || ''}</td>
+                    <td>${transaction.amount || ''}</td>
+                    <td>${transaction.date || ''}</td>
+                    <td>${transaction.items ? transaction.items.join(', ') : ''}</td>
+                    <td>${transaction.couponUsed ? 'Yes' : 'No'}</td>
                 `;
-                tbody.appendChild(tr);
+                tbody.appendChild(row);
             });
-            document.getElementById('transaction-status').innerText = '';
-        } catch (error) {
-            document.getElementById('transaction-status').innerText = 'Error fetching transactions: ' + error.message;
         }
-    }
 
     // Function to search Rewards
     async function searchRewards() {
@@ -570,7 +596,9 @@
         fetchRepeatPurchaseRate();
         fetchMembers();
         fetchWoopraEvents();
-        searchTransactions(); // Initial load of transactions
+        fetchAllTransactions();
+        searchTransactions();
+        displayTransactions();
         searchRewards(); // Initial load of rewards
     };
 </script>
