@@ -1,69 +1,649 @@
 <script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+            var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+            var firstSheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheetName];
 
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
+            // Convert sheet to JSON to filter blank rows
+            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+            // Filter out blank rows (rows where all cells are empty, null, or undefined)
+            var filteredData = jsonData.filter(row => row.some(filledCell));
 
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
+            // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+            var headerRowIndex = filteredData.findIndex((row, index) =>
+              row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+            );
+            // Fallback
+            if (headerRowIndex === -1 || headerRowIndex > 25) {
+              headerRowIndex = 0;
             }
+
+            // Convert filtered JSON back to CSV
+            var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+            csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+            return csv;
+        } catch (e) {
+            console.error(e);
+            return "";
         }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+    }
+    return gk_fileData[filename] || "";
+    }
+</script>
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loyalty Program Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        h2, h3 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .dashboard-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .chart-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart-container {
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            text-align: center;
+        }
+        canvas {
+            max-width: 100%;
+            height: 200px;
+            margin: 10px auto;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 5px 0;
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #555;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #36A2EB;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #1a8cd8;
+        }
+        input, textarea {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .status-message {
+            margin-top: 10px;
+            color: #333;
+        }
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .form-row input, .form-row textarea {
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+        .form-row button {
+            flex-shrink: 0;
+        }
+    </style>
 </head>
 <body>
-    <h1>Loyalty Program Dashboard</h1>
-    <canvas id="churnChart" width="400" height="200"></canvas>
-    <script>
-        fetch('/api/loyalty/churn-rate')
-            .then(response => response.json())
-            .then(data => {
-                new Chart(document.getElementById('churnChart'), {
-                    type: 'line',
-                    data: {
-                        labels: ['Current'],
-                        datasets: [{
-                            label: 'Churn Rate (%)',
-                            data: [data],
-                            borderColor: '#007bff',
-                            fill: false
-                        }]
-                    }
-                });
+<h1>Loyalty Program Dashboard</h1>
+
+<!-- Key Metrics (Charts) -->
+<div class="dashboard-section">
+    <h2>Key Metrics</h2>
+    <div class="chart-row">
+        <!-- Churn Rate -->
+        <div class="chart-container">
+            <h3>Churn Rate (%)</h3>
+            <p id="churn-rate">Loading...</p>
+            <canvas id="churnChart"></canvas>
+        </div>
+
+        <!-- Repeat Purchase Rate -->
+        <div class="chart-container">
+            <h3>Repeat Purchase Rate (%)</h3>
+            <p id="repeat-purchase-rate">Loading...</p>
+            <canvas id="repeatPurchaseChart"></canvas>
+        </div>
+
+        <!-- Members -->
+        <div class="chart-container">
+            <h3>Members</h3>
+            <p id="members-count">Loading...</p>
+            <canvas id="membersChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Active Members List -->
+<div class="dashboard-section">
+    <h2>Active Members</h2>
+    <ul id="active-members"></ul>
+</div>
+
+<!-- Woopra Events -->
+<div class="dashboard-section">
+    <h2>Woopra Events (e.g., 'purchase')</h2>
+    <ul id="woopra-events"></ul>
+</div>
+
+<!-- Transactions -->
+<div class="dashboard-section">
+    <h2>Transactions</h2>
+    <div>
+        <input type="text" id="transactionId" placeholder="Transaction ID">
+        <input type="text" id="customerId" placeholder="Customer ID">
+        <input type="number" id="minAmount" placeholder="Min Amount">
+        <input type="number" id="maxAmount" placeholder="Max Amount">
+        <input type="text" id="timestamp" placeholder="Timestamp (yyyy-MM-dd'T'HH:mm:ss)">
+        <input type="text" id="items" placeholder="Items (comma-separated)">
+        <input type="checkbox" id="couponUsed"> Coupon Used
+        <button onclick="searchTransactions()">Find Transaction</button>
+    </div>
+    <table id="transactions-table">
+        <thead>
+        <tr>
+            <th>Transaction ID</th>
+            <th>Customer ID</th>
+            <th>Amount</th>
+            <th>Timestamp</th>
+            <th>Items</th>
+            <th>Coupon Used</th>
+        </tr>
+        </thead>
+        <tbody id="transactions-body"></tbody>
+    </table>
+    <p id="transactions-error" class="error"></p>
+</div>
+<!-- Rewards -->
+<div class="dashboard-section">
+    <h2>Rewards</h2>
+    <div>
+        <input type="text" id="rewardId" placeholder="Reward ID">
+        <input type="text" id="rewardCustomerId" placeholder="Customer ID">
+        <button onclick="searchRewards()">Search Reward</button>
+    </div>
+    <div>
+        <input type="text" id="addRewardCustomerId" placeholder="Customer ID">
+        <input type="number" id="pointsEarned" placeholder="Points Earned">
+        <input type="number" id="pointsRedeemed" placeholder="Points Redeemed">
+        <button onclick="addReward()">Add Reward</button>
+    </div>
+    <table id="rewards-table">
+        <thead>
+        <tr>
+            <th>Reward ID</th>
+            <th>Customer ID</th>
+            <th>Points Earned</th>
+            <th>Points Redeemed</th>
+            <th>Date</th>
+        </tr>
+        </thead>
+        <tbody id="rewards-body"></tbody>
+    </table>
+    <p id="rewards-error" class="error"></p>
+</div>
+
+<!-- Reduce Churn -->
+<div class="dashboard-section">
+    <h2>Reduce Churn</h2>
+    <button onclick="reduceChurn()">Reduce Churn Now</button>
+    <p id="reduce-churn-status" class="status-message"></p>
+</div>
+
+<!-- Sync Customer -->
+<div class="dashboard-section">
+    <h2>Sync Customer</h2>
+    <div class="form-row">
+        <input id="sync-customer-id" type="text" placeholder="Customer ID">
+        <input id="sync-customer-name" type="text" placeholder="Customer Name">
+        <button onclick="syncCustomer()">Sync Customer</button>
+    </div>
+    <p id="customer-sync-status" class="status-message"></p>
+</div>
+
+<script>
+    // Function to fetch and display Churn Rate
+    async function fetchChurnRate() {
+        try {
+            const response = await fetch('/api/loyalty/churn-rate');
+            if (!response.ok) throw new Error('Failed to fetch churn rate');
+            const churnRate = await response.json();
+            document.getElementById('churn-rate').innerText = churnRate.toFixed(2) + '%';
+
+            const ctx = document.getElementById('churnChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Churn Rate'],
+                    datasets: [{
+                        label: 'Churn Rate (%)',
+                        data: [churnRate],
+                        backgroundColor: '#36A2EB',
+                        borderColor: '#36A2EB',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { stepSize: 10 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
             });
-    </script>
+        } catch (error) {
+            document.getElementById('churn-rate').innerText = 'Error fetching data';
+        }
+    }
+
+    // Function to fetch and display Repeat Purchase Rate
+    async function fetchRepeatPurchaseRate() {
+        try {
+            const response = await fetch('/api/loyalty/repeat-purchase-rate');
+            if (!response.ok) throw new Error('Failed to fetch repeat purchase rate');
+            const repeatRate = await response.json();
+            document.getElementById('repeat-purchase-rate').innerText = repeatRate.toFixed(2) + '%';
+
+            const ctx = document.getElementById('repeatPurchaseChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Repeat Purchase Rate'],
+                    datasets: [{
+                        label: 'Repeat Purchase Rate (%)',
+                        data: [repeatRate],
+                        backgroundColor: '#FF6384',
+                        borderColor: '#FF6384',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { stepSize: 10 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        } catch (error) {
+            document.getElementById('repeat-purchase-rate').innerText = 'Error fetching data';
+        }
+    }
+
+    // Function to fetch and display Members
+    async function fetchMembers() {
+        try {
+            // Fetch Active Members
+            const activeResponse = await fetch('/api/loyalty/active-members');
+            if (!activeResponse.ok) throw new Error('Failed to fetch active members');
+            const activeMembers = await activeResponse.json();
+
+            // Display Active Members list
+            const memberList = document.getElementById('active-members');
+            activeMembers.forEach(member => {
+                const li = document.createElement('li');
+                li.innerText = `ID: ${member.customerId || 'undefined'}, Name: ${member.name || 'Unknown'}`;
+                memberList.appendChild(li);
+            });
+
+            // Fetch Inactive Members
+            const inactiveResponse = await fetch('/api/loyalty/inactive-members');
+            if (!inactiveResponse.ok) throw new Error('Failed to fetch inactive members');
+            const inactiveMembers = await inactiveResponse.json();
+
+            // Calculate member counts
+            const activeCount = activeMembers.length;
+            const inactiveCount = inactiveMembers.length;
+            document.getElementById('members-count').innerText = `Active: ${activeCount}, Inactive: ${inactiveCount}`;
+
+            const ctx = document.getElementById('membersChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Members'],
+                    datasets: [
+                        {
+                            label: 'Active Members',
+                            data: [activeCount],
+                            backgroundColor: '#4BC0C0',
+                            borderColor: '#4BC0C0',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Inactive Members',
+                            data: [inactiveCount],
+                            backgroundColor: '#FFCE56',
+                            borderColor: '#FFCE56',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            document.getElementById('members-count').innerText = 'Error fetching data';
+        }
+    }
+
+    // Function to fetch and display Woopra Events
+    async function fetchWoopraEvents() {
+        try {
+            const eventName = 'purchase';
+            const response = await fetch(`/api/loyalty/woopra-events/${eventName}`);
+            if (!response.ok) throw new Error(`Failed to fetch Woopra events: ${response.statusText} (${response.status})`);
+            const events = await response.json();
+            const eventList = document.getElementById('woopra-events');
+            if (!events || events.length === 0) {
+                eventList.innerHTML = '<li>No events found for "purchase". Try a different event name or ensure data exists.</li>';
+                return;
+            }
+            events.forEach(event => {
+                const li = document.createElement('li');
+                li.innerText = `Event: ${event.eventName || 'Unknown'}, Timestamp: ${event.timestamp || 'N/A'}`;
+                eventList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Woopra Events Error:', error);
+            document.getElementById('woopra-events').innerHTML = `<li>Error fetching data: ${error.message}</li>`;
+        }
+    }
+
+    // Transactions Section
+        function fetchAllTransactions() {
+            fetch('/api/loyalty/transactions/all')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Transactions API Response:', data); // Log the response for debugging
+                    displayTransactions(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching transactions:', error);
+                    document.getElementById('transactions-error').textContent =
+                        'Error fetching transactions: ' + error.message;
+                });
+        }
+
+        function searchTransactions() {
+            const params = new URLSearchParams();
+            const transactionId = document.getElementById('transactionId').value;
+            const customerId = document.getElementById('customerId').value;
+            const minAmount = document.getElementById('minAmount').value;
+            const maxAmount = document.getElementById('maxAmount').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const items = document.getElementById('items').value;
+            const couponUsed = document.getElementById('couponUsed').checked;
+
+            if (transactionId) params.append('transactionId', transactionId);
+            if (customerId) params.append('customerId', customerId);
+            if (minAmount) params.append('minAmount', minAmount);
+            if (maxAmount) params.append('maxAmount', maxAmount);
+            if (timestamp) params.append('timestamp', timestamp);
+            if (items) params.append('items', items);
+            if (couponUsed) params.append('couponUsed', couponUsed);
+
+            fetch(`/api/loyalty/transactions/search?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Search Transactions API Response:', data);
+                    displayTransactions(data);
+                })
+                .catch(error => {
+                    console.error('Error searching transactions:', error);
+                    document.getElementById('transactions-error').textContent =
+                        'Error fetching transactions: ' + error.message;
+                });
+        }
+
+        function displayTransactions(transactions) {
+            const tbody = document.getElementById('transactions-body');
+            tbody.innerHTML = '';
+            document.getElementById('transactions-error').textContent = '';
+
+            if (!Array.isArray(transactions) || transactions.length === 0) {
+                document.getElementById('transactions-error').textContent = 'No transactions found.';
+                return;
+            }
+
+            transactions.forEach((transaction, index) => {
+                if (!transaction) {
+                    console.warn(`Transaction at index ${index} is undefined or null`);
+                    return; // Skip undefined/null transactions
+                }
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.id || ''}</td>
+                    <td>${transaction.customerId || ''}</td>
+                    <td>${transaction.amount || ''}</td>
+                    <td>${transaction.date || ''}</td>
+                    <td>${transaction.items ? transaction.items.join(', ') : ''}</td>
+                    <td>${transaction.couponUsed ? 'Yes' : 'No'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+         // Rewards Section
+        function fetchAllRewards() {
+            fetch('/api/loyalty/rewards')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Rewards API Response:', data);
+                    displayRewards(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching rewards:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error fetching rewards: ' + error.message;
+                });
+        }
+
+    // Function to search Rewards
+    function searchRewards() {
+            const params = new URLSearchParams();
+            const rewardId = document.getElementById('rewardId').value;
+            const customerId = document.getElementById('rewardCustomerId').value;
+
+            if (rewardId) params.append('rewardId', rewardId);
+            if (customerId) params.append('customerId', customerId);
+
+            fetch(`/api/loyalty/rewards/search?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Search Rewards API Response:', data);
+                    displayRewards(data);
+                })
+                .catch(error => {
+                    console.error('Error searching rewards:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error searching rewards: ' + error.message;
+                });
+        }
+
+    function addReward() {
+            const customerId = document.getElementById('addRewardCustomerId').value;
+            const pointsEarned = document.getElementById('pointsEarned').value;
+            const pointsRedeemed = document.getElementById('pointsRedeemed').value;
+
+            if (!customerId || !pointsEarned || !pointsRedeemed) {
+                document.getElementById('rewards-error').textContent =
+                    'Please fill in all fields to add a reward.';
+                return;
+            }
+
+            const reward = {
+                customerId: customerId,
+                pointsEarned: parseInt(pointsEarned),
+                pointsRedeemed: parseInt(pointsRedeemed),
+                date: new Date().toISOString()
+            };
+
+            fetch('/api/loyalty/rewards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reward)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    fetchAllRewards(); // Refresh the rewards table
+                    document.getElementById('rewards-error').textContent = 'Reward added successfully!';
+                })
+                .catch(error => {
+                    console.error('Error adding reward:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error adding reward: ' + error.message;
+                });
+        }
+
+        function displayRewards(rewards) {
+            const tbody = document.getElementById('rewards-body');
+            tbody.innerHTML = '';
+            document.getElementById('rewards-error').textContent = '';
+
+            if (!Array.isArray(rewards) || rewards.length === 0) {
+                document.getElementById('rewards-error').textContent = 'No rewards found.';
+                return;
+            }
+
+            rewards.forEach((reward, index) => {
+                if (!reward) {
+                    console.warn(`Reward at index ${index} is undefined or null`);
+                    return;
+                }
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${reward.rewardId || ''}</td>
+                    <td>${reward.customerId || ''}</td>
+                    <td>${reward.pointsEarned || 0}</td>
+                    <td>${reward.pointsRedeemed || 0}</td>
+                    <td>${reward.date || ''}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+    // Function to trigger Reduce Churn
+    async function reduceChurn() {
+        try {
+            const response = await fetch('/api/loyalty/reduce-churn', { method: 'POST' });
+            if (response.ok) {
+                document.getElementById('reduce-churn-status').innerText = 'Churn reduction triggered successfully!';
+            } else {
+                document.getElementById('reduce-churn-status').innerText = 'Failed to trigger churn reduction.';
+            }
+        } catch (error) {
+            document.getElementById('reduce-churn-status').innerText = 'Error: ' + error.message;
+        }
+    }
+
+    // Function to sync a Customer
+    async function syncCustomer() {
+        try {
+            const customerId = document.getElementById('sync-customer-id').value;
+            const customerName = document.getElementById('sync-customer-name').value;
+            if (!customerId || !customerName) throw new Error('Please fill in all fields');
+            const customer = { id: customerId, name: customerName };
+
+            const response = await fetch('/api/loyalty/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(customer)
+            });
+
+            if (response.ok) {
+                document.getElementById('customer-sync-status').innerText = 'Customer synced successfully!';
+                document.getElementById('sync-customer-id').value = '';
+                document.getElementById('sync-customer-name').value = '';
+            } else {
+                document.getElementById('customer-sync-status').innerText = 'Failed to sync customer.';
+            }
+        } catch (error) {
+            document.getElementById('customer-sync-status').innerText = 'Error: ' + error.message;
+        }
+    }
+
+    // Fetch all data on page load
+    window.onload = () => {
+        fetchChurnRate();
+            fetchRepeatPurchaseRate();
+            fetchMembers();
+            fetchWoopraEvents();
+            fetchAllTransactions();
+            fetchAllRewards();
+    };
+</script>
 </body>
 </html>
