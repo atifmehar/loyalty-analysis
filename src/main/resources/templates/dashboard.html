@@ -218,14 +218,15 @@
 <!-- Rewards -->
 <div class="dashboard-section">
     <h2>Rewards</h2>
-    <div class="form-row">
-        <input id="search-reward-id" type="text" placeholder="Reward ID">
-        <input id="search-reward-description" type="text" placeholder="Description">
+    <div>
+        <input type="text" id="rewardId" placeholder="Reward ID">
+        <input type="text" id="rewardCustomerId" placeholder="Customer ID">
         <button onclick="searchRewards()">Search Reward</button>
     </div>
-    <div class="form-row" style="margin-top: 10px;">
-        <input id="reward-id" type="text" placeholder="Reward ID">
-        <textarea id="reward-description" placeholder="Reward Description"></textarea>
+    <div>
+        <input type="text" id="addRewardCustomerId" placeholder="Customer ID">
+        <input type="number" id="pointsEarned" placeholder="Points Earned">
+        <input type="number" id="pointsRedeemed" placeholder="Points Redeemed">
         <button onclick="addReward()">Add Reward</button>
     </div>
     <table id="rewards-table">
@@ -240,7 +241,7 @@
         </thead>
         <tbody id="rewards-body"></tbody>
     </table>
-    <p id="reward-status" class="status-message"></p>
+    <p id="rewards-error" class="error"></p>
 </div>
 
 <!-- Reduce Churn -->
@@ -495,69 +496,104 @@
             });
         }
 
+         // Rewards Section
+        function fetchAllRewards() {
+            fetch('/api/loyalty/rewards')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Rewards API Response:', data);
+                    displayRewards(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching rewards:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error fetching rewards: ' + error.message;
+                });
+        }
+
     // Function to search Rewards
-    async function searchRewards() {
-        try {
-            const rewardId = document.getElementById('search-reward-id').value;
-            const description = document.getElementById('search-reward-description').value;
-
-            // Build query parameters
+    function searchRewards() {
             const params = new URLSearchParams();
-            if (rewardId) params.append('rewardId', rewardId);
-            if (description) params.append('description', description);
+            const rewardId = document.getElementById('rewardId').value;
+            const customerId = document.getElementById('rewardCustomerId').value;
 
-            const response = await fetch(`/api/loyalty/rewards?${params.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch rewards');
-            const rewards = await response.json();
-            const tbody = document.getElementById('rewards-body');
-            tbody.innerHTML = ''; // Clear existing rows
-            if (rewards.length === 0) {
-                document.getElementById('reward-status').innerText = 'No rewards found.';
+            if (rewardId) params.append('rewardId', rewardId);
+            if (customerId) params.append('customerId', customerId);
+
+            fetch(`/api/loyalty/rewards/search?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Search Rewards API Response:', data);
+                    displayRewards(data);
+                })
+                .catch(error => {
+                    console.error('Error searching rewards:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error searching rewards: ' + error.message;
+                });
+        }
+
+    function addReward() {
+            const customerId = document.getElementById('addRewardCustomerId').value;
+            const pointsEarned = document.getElementById('pointsEarned').value;
+            const pointsRedeemed = document.getElementById('pointsRedeemed').value;
+
+            if (!customerId || !pointsEarned || !pointsRedeemed) {
+                document.getElementById('rewards-error').textContent =
+                    'Please fill in all fields to add a reward.';
                 return;
             }
-            rewards.forEach(reward => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${reward.rewardId || 'N/A'}</td>
-                    <td>${reward.customerId || 'N/A'}</td>
-                    <td>${reward.pointsEarned || 'N/A'}</td>
-                    <td>${reward.pointsRedeemed || 'N/A'}</td>
-                    <td>${reward.date || 'N/A'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            document.getElementById('reward-status').innerText = '';
-        } catch (error) {
-            document.getElementById('reward-status').innerText = 'Error fetching rewards: ' + error.message;
-        }
-    }
 
-    // Function to add a Reward
-    async function addReward() {
-        try {
-            const rewardId = document.getElementById('reward-id').value;
-            const rewardDescription = document.getElementById('reward-description').value;
-            if (!rewardId || !rewardDescription) throw new Error('Please fill in all fields');
-            const reward = { id: rewardId, description: rewardDescription };
+            const reward = {
+                customerId: customerId,
+                pointsEarned: parseInt(pointsEarned),
+                pointsRedeemed: parseInt(pointsRedeemed),
+                date: new Date().toISOString()
+            };
 
-            const response = await fetch('/api/loyalty/rewards', {
+            fetch('/api/loyalty/rewards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reward)
-            });
-
-            if (response.ok) {
-                document.getElementById('reward-status').innerText = 'Reward added successfully!';
-                document.getElementById('reward-id').value = '';
-                document.getElementById('reward-description').value = '';
-                searchRewards(); // Refresh the table
-            } else {
-                document.getElementById('reward-status').innerText = 'Failed to add reward.';
-            }
-        } catch (error) {
-            document.getElementById('reward-status').innerText = 'Error: ' + error.message;
+            })
+                .then(response => response.json())
+                .then(data => {
+                    fetchAllRewards(); // Refresh the rewards table
+                    document.getElementById('rewards-error').textContent = 'Reward added successfully!';
+                })
+                .catch(error => {
+                    console.error('Error adding reward:', error);
+                    document.getElementById('rewards-error').textContent =
+                        'Error adding reward: ' + error.message;
+                });
         }
-    }
+
+        function displayRewards(rewards) {
+            const tbody = document.getElementById('rewards-body');
+            tbody.innerHTML = '';
+            document.getElementById('rewards-error').textContent = '';
+
+            if (!Array.isArray(rewards) || rewards.length === 0) {
+                document.getElementById('rewards-error').textContent = 'No rewards found.';
+                return;
+            }
+
+            rewards.forEach((reward, index) => {
+                if (!reward) {
+                    console.warn(`Reward at index ${index} is undefined or null`);
+                    return;
+                }
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${reward.rewardId || ''}</td>
+                    <td>${reward.customerId || ''}</td>
+                    <td>${reward.pointsEarned || 0}</td>
+                    <td>${reward.pointsRedeemed || 0}</td>
+                    <td>${reward.date || ''}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
 
     // Function to trigger Reduce Churn
     async function reduceChurn() {
@@ -602,13 +638,11 @@
     // Fetch all data on page load
     window.onload = () => {
         fetchChurnRate();
-        fetchRepeatPurchaseRate();
-        fetchMembers();
-        fetchWoopraEvents();
-        fetchAllTransactions();
-        searchTransactions();
-        displayTransactions();
-        searchRewards(); // Initial load of rewards
+            fetchRepeatPurchaseRate();
+            fetchMembers();
+            fetchWoopraEvents();
+            fetchAllTransactions();
+            fetchAllRewards();
     };
 </script>
 </body>
