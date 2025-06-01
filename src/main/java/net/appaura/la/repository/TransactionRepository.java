@@ -7,9 +7,10 @@ import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
 
-public interface TransactionRepository extends ReactiveMongoRepository<Transaction, String> {
+public interface TransactionRepository extends ReactiveMongoRepository<Transaction, String>, CustomTransactionRepository {
     Flux<Transaction> findByCustomerId(String customerId);
 
     @Query("{ 'date': { $gt: ?0 } }")
     Flux<Transaction> findByDateAfter(LocalDateTime date);
+
 }

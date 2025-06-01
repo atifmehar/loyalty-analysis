@@ -4,10 +4,7 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import net.appaura.la.client.LoyaltyPlatformClient;
 import net.appaura.la.client.WoopraClient;
-import net.appaura.la.model.Customer;
-import net.appaura.la.model.Reward;
-import net.appaura.la.model.Transaction;
-import net.appaura.la.model.WoopraEventLog;
+import net.appaura.la.model.*;
 import net.appaura.la.repository.CustomerRepository;
 import net.appaura.la.repository.RewardRepository;
 import net.appaura.la.repository.TransactionRepository;
@@ -214,6 +211,39 @@ public class LoyaltyService {
                 })
                 .doOnComplete(() -> logger.info("Completed reduce-churn operation"))
                 .doOnError(e -> logger.error("Error in reduce-churn operation: {}", e.getMessage()))
+                .then();
+    }
+
+    public Flux<Transaction> getAllTransactions() {
+        return transactionRepository.findAll();
+    }
+
+    public Flux<Transaction> searchTransactions(
+            String transactionId,
+            String customerId,
+            Double minAmount,
+            Double maxAmount,
+            String timestamp,
+            String items,
+            Boolean couponUsed) {
+        return transactionRepository.findByCriteria(transactionId, customerId, minAmount, maxAmount, timestamp, items, couponUsed);
+    }
+
+    public Flux<Customer> getInactiveMembers() {
+        return customerRepository.findByStatusInactive(); // Assuming a method to find inactive customers
+    }
+
+    public Flux<Reward> getAllRewards() {
+        return rewardRepository.findAll();
+    }
+
+    public Flux<Reward> searchRewards(String rewardId, String customerId) {
+        return rewardRepository.findByCriteria(rewardId, customerId); // Assume RewardRepository exists
+    }
+
+    public Mono<Void> populateSampleData() {
+        Transaction sampleTransaction = SamplePurchaseEventData.getSampleTransaction();
+        return trackPurchase(sampleTransaction) // Use trackPurchase to ensure Woopra event is logged
                 .then();
     }
 }
