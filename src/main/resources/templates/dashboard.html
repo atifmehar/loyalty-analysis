@@ -421,13 +421,16 @@
         }
     }
 
-    function fetchAllTransactions() {
+    // Transactions Section
+        function fetchAllTransactions() {
             fetch('/api/loyalty/transactions/all')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Transactions API Response:', data); // Log the response for debugging
                     displayTransactions(data);
                 })
                 .catch(error => {
+                    console.error('Error fetching transactions:', error);
                     document.getElementById('transactions-error').textContent =
                         'Error fetching transactions: ' + error.message;
                 });
@@ -454,9 +457,11 @@
             fetch(`/api/loyalty/transactions/search?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Search Transactions API Response:', data);
                     displayTransactions(data);
                 })
                 .catch(error => {
+                    console.error('Error searching transactions:', error);
                     document.getElementById('transactions-error').textContent =
                         'Error fetching transactions: ' + error.message;
                 });
@@ -467,12 +472,16 @@
             tbody.innerHTML = '';
             document.getElementById('transactions-error').textContent = '';
 
-            if (transactions.length === 0) {
+            if (!Array.isArray(transactions) || transactions.length === 0) {
                 document.getElementById('transactions-error').textContent = 'No transactions found.';
                 return;
             }
 
-            transactions.forEach(transaction => {
+            transactions.forEach((transaction, index) => {
+                if (!transaction) {
+                    console.warn(`Transaction at index ${index} is undefined or null`);
+                    return; // Skip undefined/null transactions
+                }
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${transaction.id || ''}</td>
