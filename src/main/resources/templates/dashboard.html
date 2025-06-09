@@ -44,6 +44,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loyalty Program Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Fallback for jQuery if CDN fails
+        if (typeof jQuery === 'undefined') {
+            document.write('<script src="/js/jquery-3.6.0.min.js"><\/script>');
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -215,6 +223,23 @@
     </table>
     <p id="transactions-error" class="error"></p>
 </div>
+
+<div class="mb-8">
+    <h2 class="text-2xl font-semibold">Late Night Offer</h2>
+    <div class="bg-white p-4 rounded shadow">
+        <form id="late-night-offer-form" onsubmit="triggerLateNightOffer(event)" class="mb-4">
+            <input type="text" id="late-night-transaction-id" placeholder="Transaction ID" class="border p-2 mr-2" required>
+            <input type="text" id="late-night-customer-id" placeholder="Customer ID" class="border p-2 mr-2" required>
+            <input type="number" id="late-night-amount" placeholder="Amount" class="border p-2 mr-2" required>
+            <input type="text" id="late-night-items" placeholder="Items" class="border p-2 mr-2" required>
+            <input type="checkbox" id="late-night-coupon-used" class="mr-2">
+            <label for="late-night-coupon-used">Coupon Used</label>
+            <button type="submit" class="bg-purple-500 text-white px-4 py-2 rounded">Trigger Late Night Offer</button>
+        </form>
+        <div id="late-night-offer-result" class="mt-4"></div>
+    </div>
+</div>
+
 <!-- Rewards -->
 <div class="dashboard-section">
     <h2>Rewards</h2>
@@ -608,6 +633,39 @@
             document.getElementById('reduce-churn-status').innerText = 'Error: ' + error.message;
         }
     }
+
+        async function triggerLateNightOffer(e) {
+                e.preventDefault();
+                try {
+                    const transaction = {
+                        transactionId: document.getElementById('late-night-transaction-id').value,
+                        customerId: document.getElementById('late-night-customer-id').value,
+                        amount: parseFloat(document.getElementById('late-night-amount').value),
+                        date: new Date().toISOString(),
+                        items: document.getElementById('late-night-items').value.split(','),
+                        couponUsed: document.getElementById('late-night-coupon-used').checked ? 'YES' : null
+                    };
+
+                    const response = await fetch('/api/loyalty/late-night-offer', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transaction)
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        document.getElementById('late-night-offer-result').innerHTML =
+                            `Status: ${result.status}<br>Message: ${result.message}${result.offer ? '<br>Offer: ' + result.offer : ''}`;
+                    } else {
+                        document.getElementById('late-night-offer-result').innerText = `Error: ${result.message}`;
+                    }
+                } catch (error) {
+                    document.getElementById('late-night-offer-result').innerText = 'Error: ' + error.message;
+                    console.error('Failed to trigger late night offer:', error);
+                }
+            }
 
     // Function to sync a Customer
     async function syncCustomer() {
