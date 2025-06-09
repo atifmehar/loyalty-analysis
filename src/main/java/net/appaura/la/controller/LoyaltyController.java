@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -115,7 +116,8 @@ public class LoyaltyController {
 
     @PostMapping("/late-night-offer")
     public Mono<Map<String, Object>> triggerLateNightOffer(@RequestBody Transaction transaction) {
-        return loyaltyService.trackLateNightOffer(transaction)
+        log.info("<<<< inside triggerLateNightOffer() >>>>");
+        return loyaltyService.trackLateNightOffer(transaction, LocalDateTime.now())
                 .doOnError(e -> log.error("Error triggering late night offer: {}", e.getMessage()))
                 .onErrorResume(e -> Mono.just(Map.of(
                         "status", "error",
