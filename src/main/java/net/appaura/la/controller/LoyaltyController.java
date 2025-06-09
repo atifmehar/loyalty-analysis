@@ -31,11 +31,6 @@ public class LoyaltyController {
         this.woopraEventLogRepository = woopraEventLogRepository;
     }
 
-    @PostMapping("/transactions")
-    public Mono<Transaction> addTransaction(@RequestBody Transaction transaction) {
-        return loyaltyService.trackPurchase(transaction);
-    }
-
     @PostMapping("/rewards")
     public Mono<Reward> addReward(@RequestBody Reward reward) {
         return loyaltyService.trackRedemption(reward);
@@ -107,11 +102,6 @@ public class LoyaltyController {
             @RequestParam(required = false) String rewardId,
             @RequestParam(required = false) String customerId) {
         return loyaltyService.searchRewards(rewardId, customerId);
-    }
-
-    @PostMapping("/populate-sample-data")
-    public Mono<Void> populateSampleData() {
-        return loyaltyService.populateSampleData();
     }
 
     @PostMapping("/late-night-offer")

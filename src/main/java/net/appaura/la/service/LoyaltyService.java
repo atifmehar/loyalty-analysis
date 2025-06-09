@@ -241,12 +241,6 @@ public class LoyaltyService {
         return rewardRepository.findByCriteria(rewardId, customerId); // Assume RewardRepository exists
     }
 
-    public Mono<Void> populateSampleData() {
-        Transaction sampleTransaction = SamplePurchaseEventData.getSampleTransaction();
-        return trackPurchase(sampleTransaction) // Use trackPurchase to ensure Woopra event is logged
-                .then();
-    }
-
     public Mono<Map<String, Object>> trackLateNightOffer(Transaction transaction, LocalDateTime now) {
         logger.info("<<<< inside trackLateNightOffer() >>>>");
         int hour = now.getHour();
