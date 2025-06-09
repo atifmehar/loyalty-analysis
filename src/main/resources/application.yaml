@@ -8,6 +8,9 @@ spring:
     check-template-location: true
     prefix: classpath:/templates/
     suffix: .html
+  jackson:
+    time-zone: UTC  # Ensure consistent time zone
+
 
 woopra:
   app-id: appaura

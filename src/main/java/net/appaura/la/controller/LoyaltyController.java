@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/loyalty")
 @Log4j2
@@ -109,5 +111,15 @@ public class LoyaltyController {
     @PostMapping("/populate-sample-data")
     public Mono<Void> populateSampleData() {
         return loyaltyService.populateSampleData();
+    }
+
+    @PostMapping("/late-night-offer")
+    public Mono<Map<String, Object>> triggerLateNightOffer(@RequestBody Transaction transaction) {
+        return loyaltyService.trackLateNightOffer(transaction)
+                .doOnError(e -> log.error("Error triggering late night offer: {}", e.getMessage()))
+                .onErrorResume(e -> Mono.just(Map.of(
+                        "status", "error",
+                        "message", "Failed to process late night offer: " + e.getMessage()
+                )));
     }
 }
