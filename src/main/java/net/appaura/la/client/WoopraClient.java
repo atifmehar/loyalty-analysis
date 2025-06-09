@@ -20,4 +20,14 @@ public interface WoopraClient {
             @RequestParam(value = "cv_pointsRedeemed", required = false) Integer pointsRedeemed,
             @RequestParam(value = "cv_offer", required = false) String offer
     );
+
+    @GetMapping(value = "/track/ce")
+    Mono<String> trackLateNightActivity(
+            @RequestParam("website") String website,
+            @RequestParam("cookie") String cookie,
+            @RequestParam("event") String event,
+            @RequestParam("cv_userId") String userId,
+            @RequestParam(value = "cv_timestamp", required = false) String timestamp,
+            @RequestParam(value = "cv_offer", required = false) String offer
+    );
 }

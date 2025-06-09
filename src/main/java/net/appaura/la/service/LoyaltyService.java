@@ -246,4 +246,55 @@ public class LoyaltyService {
         return trackPurchase(sampleTransaction) // Use trackPurchase to ensure Woopra event is logged
                 .then();
     }
+
+    public Mono<Map<String, Object>> trackLateNightOffer(Transaction transaction) {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Karachi"));
+        int hour = now.getHour();
+        if (hour >= 18 || hour < 2) { // Late night: 10 PM to 2 AM UTC
+            return transactionRepository.save(transaction)
+                    .flatMap(saved -> {
+                        Map<String, Object> properties = new HashMap<>();
+                        properties.put("cv_userId", saved.customerId());
+                        properties.put("cv_timestamp", now.toString());
+                        properties.put("cv_offer", "15% off next purchase");
+
+                        WoopraEventLog eventLog = new WoopraEventLog("late_night_activity", properties);
+                        return woopraEventLogRepository.save(eventLog)
+                                .then(woopraClient.trackLateNightActivity(
+                                        DOMAIN_NAME,
+                                        UUID.randomUUID().toString(),
+                                        "late_night_activity",
+                                        saved.customerId(),
+                                        now.toString(),
+                                        "15% off next purchase"
+                                ))
+                                .doOnSuccess(response -> logger.info("Woopra late night event response: {}", response))
+                                .doOnError(e -> logger.error("Failed to track late night event: {}", e.getMessage()))
+                                .onErrorResume(FeignException.class, e -> {
+                                    logger.warn("Woopra API call failed for late night event, proceeding: {}", e.getMessage());
+                                    return Mono.just("Woopra error: " + e.getMessage());
+                                })
+                                .then(loyaltyPlatformClient.sendOffer(Map.of(
+                                                "customerId", saved.customerId(),
+                                                "offer", "15% off next purchase"
+                                        ))
+                                        .doOnSuccess(response -> logger.info("Late night offer sent to customer {}: {}", saved.customerId(), response))
+                                        .doOnError(e -> logger.error("Failed to send late night offer to customer {}: {}", saved.customerId(), e.getMessage()))
+                                        .onErrorResume(FeignException.class, e -> {
+                                            logger.warn("Loyalty platform offer send failed for customer {}: {}", saved.customerId(), e.getMessage());
+                                            return Mono.just("Offer send error: " + e.getMessage());
+                                        }))
+                                .thenReturn(Map.of(
+                                        "status", "success",
+                                        "message", "Late night offer sent to customer: " + saved.customerId(),
+                                        "offer", "15% off next purchase"
+                                ));
+                    });
+        } else {
+            return Mono.just(Map.of(
+                    "status", "skipped",
+                    "message", "Not within late night hours (10 PM - 2 AM UTC)"
+            ));
+        }
+    }
 }
