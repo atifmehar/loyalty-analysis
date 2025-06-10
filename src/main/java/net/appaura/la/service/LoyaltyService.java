@@ -241,16 +241,10 @@ public class LoyaltyService {
         return rewardRepository.findByCriteria(rewardId, customerId); // Assume RewardRepository exists
     }
 
-    public Mono<Void> populateSampleData() {
-        Transaction sampleTransaction = SamplePurchaseEventData.getSampleTransaction();
-        return trackPurchase(sampleTransaction) // Use trackPurchase to ensure Woopra event is logged
-                .then();
-    }
-
-    public Mono<Map<String, Object>> trackLateNightOffer(Transaction transaction) {
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Karachi"));
+    public Mono<Map<String, Object>> trackLateNightOffer(Transaction transaction, LocalDateTime now) {
+        logger.info("<<<< inside trackLateNightOffer() >>>>");
         int hour = now.getHour();
-        if (hour >= 18 || hour < 2) { // Late night: 10 PM to 2 AM UTC
+        if (hour >= 22 || hour < 2) { // Late night: 10 PM to 2 AM UTC
             return transactionRepository.save(transaction)
                     .flatMap(saved -> {
                         Map<String, Object> properties = new HashMap<>();

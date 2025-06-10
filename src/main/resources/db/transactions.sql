@@ -6,7 +6,7 @@ db.transactions.drop();
 // Insert transactions from Transactions.csv
 db.transactions.insertMany([
     {
-        transactionId: "t1",
+        _id: "t1",
         customerId: "c1",
         amount: 100,
         date: ISODate("2025-04-29T10:00:00Z"),
@@ -14,7 +14,7 @@ db.transactions.insertMany([
         couponUsed: "COUPON10"
     },
     {
-        transactionId: "t2",
+        _id: "t2",
         customerId: "c2",
         amount: 150,
         date: ISODate("2025-04-30T12:00:00Z"),
@@ -22,7 +22,7 @@ db.transactions.insertMany([
         couponUsed: null
     },
     {
-        transactionId: "t3",
+        _id: "t3",
         customerId: "c1",
         amount: 200,
         date: ISODate("2025-05-01T14:00:00Z"),
@@ -30,7 +30,7 @@ db.transactions.insertMany([
         couponUsed: null
     },
     {
-        transactionId: "t4",
+        _id: "t4",
         customerId: "c4",
         amount: 80,
         date: ISODate("2025-05-05T09:00:00Z"),
@@ -38,7 +38,7 @@ db.transactions.insertMany([
         couponUsed: "COUPON20"
     },
     {
-        transactionId: "t5",
+        _id: "t5",
         customerId: "c5",
         amount: 120,
         date: ISODate("2025-05-10T11:00:00Z"),
@@ -46,7 +46,7 @@ db.transactions.insertMany([
         couponUsed: null
     },
     {
-        transactionId: "t6",
+        _id: "t6",
         customerId: "c2",
         amount: 90,
         date: ISODate("2025-05-15T13:00:00Z"),
@@ -54,7 +54,7 @@ db.transactions.insertMany([
         couponUsed: "COUPON10"
     },
     {
-        transactionId: "t7",
+        _id: "t7",
         customerId: "c1",
         amount: 130,
         date: ISODate("2025-05-20T15:00:00Z"),
@@ -62,7 +62,7 @@ db.transactions.insertMany([
         couponUsed: null
     },
     {
-        transactionId: "t8",
+        _id: "t8",
         customerId: "c4",
         amount: 110,
         date: ISODate("2025-05-25T08:00:00Z"),
@@ -70,7 +70,7 @@ db.transactions.insertMany([
         couponUsed: null
     },
     {
-        transactionId: "t9",
+        _id: "t9",
         customerId: "c5",
         amount: 140,
         date: ISODate("2025-05-27T16:00:00Z"),
@@ -79,7 +79,7 @@ db.transactions.insertMany([
     },
     // Add a late-night transaction for testing
     {
-        transactionId: "t10",
+        _id: "t10",
         customerId: "c1",
         amount: 175,
         date: ISODate("2025-06-05T23:00:00Z"), // 11 PM UTC, 4 AM PKT on June 6
