@@ -2,12 +2,16 @@ package net.appaura.la.client;
 
 import net.appaura.la.config.FeignConfig;
 import net.appaura.la.model.Customer;
+import net.appaura.la.model.Transaction;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 
 @FeignClient(name = "loyalty-platform", url = "https://api.mockfly.dev/mocks/897e33fb-fb39-4c89-a14b-341a4b1378a9", configuration = FeignConfig.class)
@@ -17,4 +21,7 @@ public interface LoyaltyPlatformClient {
 
     @PostMapping(value = "/offers", consumes = MediaType.APPLICATION_JSON_VALUE)
     Mono<String> sendOffer(@RequestBody Map<String, String> offer);
+
+    @GetMapping(value = "/transactions", produces = MediaType.APPLICATION_JSON_VALUE)
+    Mono<List<Transaction>> getAllTransactions();
 }

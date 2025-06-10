@@ -139,12 +139,12 @@ public class LoyaltyService {
     }
 
     public Mono<Double> calculateChurnRate() {
-        LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         return customerRepository.findAll()
                 .collectList()
                 .flatMap(customers -> {
                     Flux<Transaction> recentTransactions = transactionRepository.findAll()
-                            .filter(t -> t.date().isAfter(ninetyDaysAgo));
+                            .filter(t -> t.date().isAfter(thirtyDaysAgo));
                     return recentTransactions
                             .map(Transaction::customerId)
                             .distinct()
@@ -215,7 +215,8 @@ public class LoyaltyService {
     }
 
     public Flux<Transaction> getAllTransactions() {
-        return transactionRepository.findAll();
+        return loyaltyPlatformClient.getAllTransactions()
+                .flatMapMany(Flux::fromIterable);
     }
 
     public Flux<Transaction> searchTransactions(

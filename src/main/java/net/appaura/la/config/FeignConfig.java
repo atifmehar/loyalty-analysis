@@ -8,15 +8,15 @@ import feign.Retryer;
 import feign.auth.BasicAuthRequestInterceptor;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
+import feign.jackson.JacksonDecoder;
 import feign.jackson.JacksonEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import reactor.core.publisher.Mono;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 @Configuration
 public class FeignConfig {
@@ -42,17 +42,17 @@ public class FeignConfig {
     }
 
     @Bean
-    public Decoder feignDecoder() {
+    public Decoder feignDecoder(ObjectMapper mapper) {
         return (response, type) -> {
-            try (BufferedReader reader = new BufferedReader(response.body().asReader(StandardCharsets.UTF_8))) {
-                StringBuilder result = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    result.append(line);
+            try {
+                if (type instanceof ParameterizedType && ((ParameterizedType) type).getRawType().equals(reactor.core.publisher.Mono.class)) {
+                    Type genericType = ((ParameterizedType) type).getActualTypeArguments()[0];
+                    Object result = mapper.readValue(response.body().asInputStream(), mapper.getTypeFactory().constructType(genericType));
+                    return reactor.core.publisher.Mono.just(result); // Explicitly wrap in Mono
                 }
-                return Mono.just(result.toString());
+                return mapper.readValue(response.body().asInputStream(), mapper.getTypeFactory().constructType(type));
             } catch (IOException e) {
-                return Mono.error(new RuntimeException("Failed to decode response", e));
+                throw new RuntimeException("Failed to decode response", e);
             }
         };
     }
@@ -62,9 +62,17 @@ public class FeignConfig {
         return Logger.Level.FULL; // For debugging Feign requests
     }
 
-    // In FeignConfig.java
     @Bean
     public Retryer retryer() {
         return new Retryer.Default(100, 1000, 3); // 100ms initial backoff, 1s max backoff, 3 attempts
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.configure(SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS, false);
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, false); // Avoid extra whitespace
+        return mapper;
     }
 }

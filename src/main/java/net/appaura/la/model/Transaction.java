@@ -1,17 +1,15 @@
 package net.appaura.la.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Document(collection = "transactions")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record Transaction(
-    @Id String transactionId,
-    String customerId,
-    double amount,
-    LocalDateTime date,
-    List<String> items,
-    String couponUsed
+        String transactionId,
+        String customerId,
+        double amount,
+        LocalDateTime date,
+        List<String> items,
+        String couponUsed // Changed from boolean to String to match Mockfly response
 ) {}
