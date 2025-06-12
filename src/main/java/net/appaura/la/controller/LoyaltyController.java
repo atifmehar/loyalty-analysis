@@ -114,4 +114,17 @@ public class LoyaltyController {
                         "message", "Failed to process late night offer: " + e.getMessage()
                 )));
     }
+
+    // Average Order Value (AOV)
+    @GetMapping("/aov-with-coupons")
+    public Mono<Double> getAverageOrderValueWithCoupons() {
+        return loyaltyService.getAverageOrderValueWithCoupons();
+    }
+
+    // Average Order Value (AOV)
+    @GetMapping("/aov-without-coupons")
+    public Mono<Double> getAverageOrderValueWithoutCoupons() {
+        return loyaltyService.getAverageOrderValueWithoutCoupons();
+    }
+
 }
