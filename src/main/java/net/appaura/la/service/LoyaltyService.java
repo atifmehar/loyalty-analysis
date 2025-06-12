@@ -24,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -291,4 +292,17 @@ public class LoyaltyService {
             ));
         }
     }
+
+    public Mono<Double> getAverageOrderValueWithCoupons() {
+        return transactionRepository.findByCouponUsed()
+                .map(Transaction::amount)
+                .collect(Collectors.averagingDouble(Double::doubleValue));
+    }
+
+    public Mono<Double> getAverageOrderValueWithoutCoupons() {
+        return transactionRepository.findByCouponNotUsed()
+                .map(Transaction::amount)
+                .collect(Collectors.averagingDouble(Double::doubleValue));
+    }
+
 }

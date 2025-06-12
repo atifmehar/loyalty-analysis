@@ -183,6 +183,10 @@
     </div>
 </div>
 
+<h2>Coupon Effectiveness</h2>
+<p>Compare Average Order Value (AOV) with and without coupons:</p>
+<canvas id="aovChart" style="max-height: 400px;"></canvas>
+
 <!-- Active Members List -->
 <!--<div class="dashboard-section">-->
 <!--    <h2>Active Members</h2>-->
@@ -190,10 +194,10 @@
 <!--</div>-->
 
 <!-- Woopra Events -->
-<!--<div class="dashboard-section">-->
-<!--    <h2>Woopra Events (e.g., 'purchase')</h2>-->
-<!--    <ul id="woopra-events"></ul>-->
-<!--</div>-->
+<div class="dashboard-section">
+    <h2>Woopra Events (e.g., 'purchase')</h2>
+    <ul id="woopra-events"></ul>
+</div>
 
 <!-- Transactions -->
 <div class="dashboard-section">
@@ -693,6 +697,67 @@
         }
     }
 
+    async function fetchCouponEffectiveness() {
+    try {
+        const response = await Promise.all([
+            fetch('/api/loyalty/aov-with-coupons'),
+            fetch('/api/loyalty/aov-without-coupons')
+        ]);
+
+        const [withCouponsRes, withoutCouponsRes] = response;
+        if (!withCouponsRes.ok) throw new Error(`Failed to fetch AOV with coupons: ${withCouponsRes.statusText} (${withCouponsRes.status})`);
+        if (!withoutCouponsRes.ok) throw new Error(`Failed to fetch AOV without coupons: ${withoutCouponsRes.statusText} (${withoutCouponsRes.status})`);
+
+        const aovWithCoupons = await withCouponsRes.json();
+        const aovWithoutCoupons = await withoutCouponsRes.json();
+
+        const ctx = document.getElementById('aovChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['With Coupons', 'Without Coupons'],
+                datasets: [{
+                    label: 'Average Order Value ($)',
+                    data: [aovWithCoupons, aovWithoutCoupons],
+                    backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                    borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Average Order Value ($)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Coupon Usage'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Coupon Effectiveness: Average Order Value Comparison'
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Coupon Effectiveness Error:', error);
+        document.getElementById('aovChart').parentElement.innerHTML = `<p>Error fetching data: ${error.message}</p>`;
+    }
+}
+
     // Fetch all data on page load
     window.onload = () => {
         fetchChurnRate();
@@ -701,7 +766,10 @@
             fetchWoopraEvents();
             fetchAllTransactions();
             fetchAllRewards();
+
     };
+    // Call the function when the page loads
+        document.addEventListener('DOMContentLoaded', fetchCouponEffectiveness);
 </script>
 </body>
 </html>
