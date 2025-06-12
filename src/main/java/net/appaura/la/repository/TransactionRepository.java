@@ -13,4 +13,11 @@ public interface TransactionRepository extends ReactiveMongoRepository<Transacti
     @Query("{ 'date': { $gt: ?0 } }")
     Flux<Transaction> findByDateAfter(LocalDateTime date);
 
+    @Query("{couponUsed: {$exists: true,  $ne: \"\"}}")
+    Flux<Transaction> findByCouponUsed();
+
+    @Query("{couponUsed: {$exists: false}}")
+    Flux<Transaction> findByCouponNotUsed();
+
+
 }
